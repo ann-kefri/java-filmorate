@@ -3,14 +3,11 @@ package ru.yandex.practicum.filmorate.model;
 import lombok.Data;
 import java.time.LocalDate;
 
-/**
- * Film model class
- */
 @Data
-public class Film {
+public class User {
     private int id;
+    private String email;
+    private String login;
     private String name;
-    private String description;
-    private LocalDate releaseDate;
-    private int duration;
+    private LocalDate birthday;
 }
