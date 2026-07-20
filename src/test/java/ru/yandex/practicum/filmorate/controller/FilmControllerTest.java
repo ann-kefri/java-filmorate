@@ -75,4 +75,32 @@ class FilmControllerTest {
         assertNotNull(created);
         assertTrue(created.getId() > 0);
     }
+
+    @Test
+    void shouldPassValidationForReleaseDateExactlyOnMinimumDate() {
+        Film film = new Film();
+        film.setName("Valid Name");
+        film.setDescription("Valid description");
+        film.setReleaseDate(LocalDate.of(1895, 12, 28)); // ровно минимальная дата
+        film.setDuration(120);
+
+        Film created = controller.createFilm(film);
+        assertNotNull(created);
+        assertTrue(created.getId() > 0);
+        assertEquals(LocalDate.of(1895, 12, 28), created.getReleaseDate());
+    }
+
+    @Test
+    void shouldPassValidationForDescriptionExactly200Characters() {
+        Film film = new Film();
+        film.setName("Valid Name");
+        film.setDescription("A".repeat(200)); // ровно 200 символов
+        film.setReleaseDate(LocalDate.of(2000, 1, 1));
+        film.setDuration(120);
+
+        Film created = controller.createFilm(film);
+        assertNotNull(created);
+        assertTrue(created.getId() > 0);
+        assertEquals(200, created.getDescription().length());
+    }
 }
