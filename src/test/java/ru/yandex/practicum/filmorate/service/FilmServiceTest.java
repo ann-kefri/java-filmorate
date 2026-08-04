@@ -1,0 +1,149 @@
+package ru.yandex.practicum.filmorate.service;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
+import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class FilmServiceTest {
+    private FilmService filmService;
+    private UserService userService;
+    private InMemoryFilmStorage filmStorage;
+    private InMemoryUserStorage userStorage;
+
+    @BeforeEach
+    void setUp() {
+        filmStorage = new InMemoryFilmStorage();
+        userStorage = new InMemoryUserStorage();
+        filmService = new FilmService(filmStorage, userStorage);
+        userService = new UserService(userStorage);
+    }
+
+    @Test
+    void shouldAddLike() {
+        Film film = createTestFilm();
+        User user = createTestUser();
+
+        Film savedFilm = filmService.createFilm(film);
+        User savedUser = userService.createUser(user);
+
+        filmService.addLike(savedFilm.getId(), savedUser.getId());
+
+        Film likedFilm = filmService.getFilmById(savedFilm.getId());
+        assertTrue(likedFilm.getLikes().contains(savedUser.getId()));
+        assertEquals(1, likedFilm.getLikes().size());
+    }
+
+    @Test
+    void shouldGetPopularFilms() {
+        User user1 = createTestUser("user1@test.com", "user1");
+        User user2 = createTestUser("user2@test.com", "user2");
+
+        User savedUser1 = userService.createUser(user1);
+        User savedUser2 = userService.createUser(user2);
+
+        Film film1 = createTestFilm("Фильм 1");
+        Film film2 = createTestFilm("Фильм 2");
+
+        Film savedFilm1 = filmService.createFilm(film1);
+        Film savedFilm2 = filmService.createFilm(film2);
+
+        filmService.addLike(savedFilm1.getId(), savedUser1.getId());
+        filmService.addLike(savedFilm1.getId(), savedUser2.getId());
+
+        filmService.addLike(savedFilm2.getId(), savedUser1.getId());
+
+        List<Film> popular = filmService.getPopularFilms(10);
+
+        assertEquals(2, popular.get(0).getLikes().size());
+        assertEquals(1, popular.get(1).getLikes().size());
+        assertEquals(savedFilm1.getId(), popular.get(0).getId());
+        assertEquals(savedFilm2.getId(), popular.get(1).getId());
+    }
+
+    @Test
+    void shouldRemoveLike() {
+        // Создаем фильм и пользователя
+        Film film = createTestFilm();
+        User user = createTestUser();
+
+        Film savedFilm = filmService.createFilm(film);
+        User savedUser = userService.createUser(user);
+
+        filmService.addLike(savedFilm.getId(), savedUser.getId());
+        assertTrue(filmService.getFilmById(savedFilm.getId()).getLikes().contains(savedUser.getId()));
+
+        filmService.removeLike(savedFilm.getId(), savedUser.getId());
+
+        Film filmAfterRemove = filmService.getFilmById(savedFilm.getId());
+        assertFalse(filmAfterRemove.getLikes().contains(savedUser.getId()));
+        assertEquals(0, filmAfterRemove.getLikes().size());
+    }
+
+    @Test
+    void shouldHandleDuplicateLike() {
+        Film film = createTestFilm();
+        User user = createTestUser();
+
+        Film savedFilm = filmService.createFilm(film);
+        User savedUser = userService.createUser(user);
+
+        filmService.addLike(savedFilm.getId(), savedUser.getId());
+        filmService.addLike(savedFilm.getId(), savedUser.getId()); // дубликат - Set игнорирует
+
+        Film likedFilm = filmService.getFilmById(savedFilm.getId());
+        assertEquals(1, likedFilm.getLikes().size());
+        assertTrue(likedFilm.getLikes().contains(savedUser.getId()));
+    }
+
+    @Test
+    void shouldNotAddLikeForNonExistentUser() {
+        Film film = createTestFilm();
+        Film savedFilm = filmService.createFilm(film);
+
+        assertThrows(ru.yandex.practicum.filmorate.exception.NotFoundException.class,
+                () -> filmService.addLike(savedFilm.getId(), 999));
+    }
+
+    @Test
+    void shouldNotAddLikeForNonExistentFilm() {
+        User user = createTestUser();
+        User savedUser = userService.createUser(user);
+
+        assertThrows(ru.yandex.practicum.filmorate.exception.NotFoundException.class,
+                () -> filmService.addLike(999, savedUser.getId()));
+    }
+
+    private Film createTestFilm() {
+        return createTestFilm("Test Film");
+    }
+
+    private Film createTestFilm(String name) {
+        Film film = new Film();
+        film.setName(name);
+        film.setDescription("Test description");
+        film.setReleaseDate(LocalDate.of(2000, 1, 1));
+        film.setDuration(120);
+        return film;
+    }
+
+    private User createTestUser() {
+        return createTestUser("test@test.com", "testlogin");
+    }
+
+    private User createTestUser(String email, String login) {
+        User user = new User();
+        user.setEmail(email);
+        user.setLogin(login);
+        user.setName("Test User");
+        user.setBirthday(LocalDate.of(1990, 1, 1));
+        return user;
+    }
+}
