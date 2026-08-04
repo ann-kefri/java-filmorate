@@ -64,6 +64,10 @@ public class FilmService {
     }
 
     public Film removeLike(int filmId, int userId) {
+        if (userStorage.getById(userId).isEmpty()) {
+            log.error("Пользователь с id {} не найден", userId);
+            throw new NotFoundException("Пользователь с id " + userId + " не найден");
+        }
         Film film = filmStorage.getById(filmId)
                 .orElseThrow(() -> {
                     log.error("Фильм с id {} не найден", filmId);
