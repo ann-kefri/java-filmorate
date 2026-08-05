@@ -46,17 +46,18 @@ public class FilmService {
     }
 
     public Film addLike(int filmId, int userId) {
-        // Проверяем, что пользователь существует
-        if (userStorage.getById(userId).isEmpty()) {
-            log.error("Пользователь с id {} не найден", userId);
-            throw new NotFoundException("Пользователь с id " + userId + " не найден");
-        }
 
         Film film = filmStorage.getById(filmId)
                 .orElseThrow(() -> {
                     log.error("Фильм с id {} не найден", filmId);
                     return new NotFoundException("Фильм с id " + filmId + " не найден");
                 });
+
+        // Проверяем, что пользователь существует
+        if (userStorage.getById(userId).isEmpty()) {
+            log.error("Пользователь с id {} не найден", userId);
+            throw new NotFoundException("Пользователь с id " + userId + " не найден");
+        }
 
         film.getLikes().add(userId);
         log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
@@ -64,15 +65,17 @@ public class FilmService {
     }
 
     public Film removeLike(int filmId, int userId) {
-        if (userStorage.getById(userId).isEmpty()) {
-            log.error("Пользователь с id {} не найден", userId);
-            throw new NotFoundException("Пользователь с id " + userId + " не найден");
-        }
+
         Film film = filmStorage.getById(filmId)
                 .orElseThrow(() -> {
                     log.error("Фильм с id {} не найден", filmId);
                     return new NotFoundException("Фильм с id " + filmId + " не найден");
                 });
+
+        if (userStorage.getById(userId).isEmpty()) {
+            log.error("Пользователь с id {} не найден", userId);
+            throw new NotFoundException("Пользователь с id " + userId + " не найден");
+        }
 
         if (!film.getLikes().remove(userId)) {
             log.warn("Пользователь {} не ставил лайк фильму {}", userId, filmId);
