@@ -47,4 +47,34 @@ public class InMemoryFilmStorage implements FilmStorage {
         films.remove(id);
         log.debug("Фильм с id {} удален из хранилища", id);
     }
+
+    @Override
+    public void addLike(int filmId, int userId) {
+        Film film = films.get(filmId);
+        if (film == null) {
+            log.error("Фильм с id {} не найден", filmId);
+            throw new NotFoundException("Фильм с id " + filmId + " не найден");
+        }
+        film.getLikes().add(userId);
+        log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
+    }
+
+    @Override
+    public void removeLike(int filmId, int userId) {
+        Film film = films.get(filmId);
+        if (film == null) {
+            log.error("Фильм с id {} не найден", filmId);
+            throw new NotFoundException("Фильм с id " + filmId + " не найден");
+        }
+        film.getLikes().remove(userId);
+        log.info("Пользователь {} удалил лайк у фильма {}", userId, filmId);
+    }
+
+    @Override
+    public List<Film> getPopular(int count) {
+        return films.values().stream()
+                .sorted(Comparator.comparingInt((Film f) -> f.getLikes().size()).reversed())
+                .limit(count)
+                .toList();
+    }
 }

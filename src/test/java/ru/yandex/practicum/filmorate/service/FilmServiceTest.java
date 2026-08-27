@@ -2,8 +2,11 @@ package ru.yandex.practicum.filmorate.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.FilmDbStorage;
+import ru.yandex.practicum.filmorate.storage.UserDbStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
 
@@ -20,6 +23,7 @@ class FilmServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Используем InMemory хранилища для тестов (они реализуют те же интерфейсы)
         filmStorage = new InMemoryFilmStorage();
         userStorage = new InMemoryUserStorage();
         filmService = new FilmService(filmStorage, userStorage);
@@ -57,7 +61,6 @@ class FilmServiceTest {
 
         filmService.addLike(savedFilm1.getId(), savedUser1.getId());
         filmService.addLike(savedFilm1.getId(), savedUser2.getId());
-
         filmService.addLike(savedFilm2.getId(), savedUser1.getId());
 
         List<Film> popular = filmService.getPopularFilms(10);
@@ -70,7 +73,6 @@ class FilmServiceTest {
 
     @Test
     void shouldRemoveLike() {
-        // Создаем фильм и пользователя
         Film film = createTestFilm();
         User user = createTestUser();
 
@@ -96,7 +98,7 @@ class FilmServiceTest {
         User savedUser = userService.createUser(user);
 
         filmService.addLike(savedFilm.getId(), savedUser.getId());
-        filmService.addLike(savedFilm.getId(), savedUser.getId()); // дубликат - Set игнорирует
+        filmService.addLike(savedFilm.getId(), savedUser.getId());
 
         Film likedFilm = filmService.getFilmById(savedFilm.getId());
         assertEquals(1, likedFilm.getLikes().size());
@@ -104,21 +106,39 @@ class FilmServiceTest {
     }
 
     @Test
-    void shouldNotAddLikeForNonExistentUser() {
+    void shouldThrowExceptionWhenLikeFromNonExistentUser() {
         Film film = createTestFilm();
         Film savedFilm = filmService.createFilm(film);
 
-        assertThrows(ru.yandex.practicum.filmorate.exception.NotFoundException.class,
+        assertThrows(NotFoundException.class,
                 () -> filmService.addLike(savedFilm.getId(), 999));
     }
 
     @Test
-    void shouldNotAddLikeForNonExistentFilm() {
+    void shouldThrowExceptionWhenLikeNonExistentFilm() {
         User user = createTestUser();
         User savedUser = userService.createUser(user);
 
-        assertThrows(ru.yandex.practicum.filmorate.exception.NotFoundException.class,
+        assertThrows(NotFoundException.class,
                 () -> filmService.addLike(999, savedUser.getId()));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRemoveLikeFromNonExistentUser() {
+        Film film = createTestFilm();
+        Film savedFilm = filmService.createFilm(film);
+
+        assertThrows(NotFoundException.class,
+                () -> filmService.removeLike(savedFilm.getId(), 999));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRemoveLikeNonExistentFilm() {
+        User user = createTestUser();
+        User savedUser = userService.createUser(user);
+
+        assertThrows(NotFoundException.class,
+                () -> filmService.removeLike(999, savedUser.getId()));
     }
 
     private Film createTestFilm() {
