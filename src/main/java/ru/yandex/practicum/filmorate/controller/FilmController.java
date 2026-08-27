@@ -4,8 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MpaRating;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.storage.GenreDbStorage;
 import ru.yandex.practicum.filmorate.storage.MpaRatingDbStorage;
@@ -68,37 +71,35 @@ public class FilmController {
         return filmService.getPopularFilms(count);
     }
 
-    // НОВЫЕ ЭНДПОИНТЫ ДЛЯ ЖАНРОВ
     @GetMapping("/genres")
-    public List<ru.yandex.practicum.filmorate.model.Genre> getAllGenres() {
+    public List<Genre> getAllGenres() {
         log.info("Получен запрос на получение всех жанров");
         return genreStorage.getAll();
     }
 
     @GetMapping("/genres/{id}")
-    public ru.yandex.practicum.filmorate.model.Genre getGenreById(@PathVariable int id) {
+    public Genre getGenreById(@PathVariable int id) {
         log.info("Получен запрос на получение жанра с id: {}", id);
         return genreStorage.getById(id)
                 .orElseThrow(() -> {
                     log.error("Жанр с id {} не найден", id);
-                    return new ru.yandex.practicum.filmorate.exception.NotFoundException("Жанр с id " + id + " не найден");
+                    return new NotFoundException("Жанр с id " + id + " не найден");
                 });
     }
 
-    // НОВЫЕ ЭНДПОИНТЫ ДЛЯ РЕЙТИНГОВ
     @GetMapping("/mpa")
-    public List<ru.yandex.practicum.filmorate.model.MpaRating> getAllMpaRatings() {
+    public List<MpaRating> getAllMpaRatings() {
         log.info("Получен запрос на получение всех рейтингов MPA");
         return mpaRatingStorage.getAll();
     }
 
     @GetMapping("/mpa/{id}")
-    public ru.yandex.practicum.filmorate.model.MpaRating getMpaRatingById(@PathVariable int id) {
+    public MpaRating getMpaRatingById(@PathVariable int id) {
         log.info("Получен запрос на получение рейтинга MPA с id: {}", id);
         return mpaRatingStorage.getById(id)
                 .orElseThrow(() -> {
                     log.error("Рейтинг MPA с id {} не найден", id);
-                    return new ru.yandex.practicum.filmorate.exception.NotFoundException("Рейтинг MPA с id " + id + " не найден");
+                    return new NotFoundException("Рейтинг MPA с id " + id + " не найден");
                 });
     }
 
@@ -106,6 +107,22 @@ public class FilmController {
         if (film.getName() == null || film.getName().trim().isEmpty()) {
             log.error("Название фильма пустое");
             throw new ValidationException("Название фильма не может быть пустым");
+        }
+
+        if (film.getDescription() != null && film.getDescription().length() > 200) {
+            log.error("Описание фильма превышает 200 символов");
+            throw new ValidationException("Описание не может превышать 200 символов");
+        }
+
+        java.time.LocalDate minReleaseDate = java.time.LocalDate.of(1895, 12, 28);
+        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(minReleaseDate)) {
+            log.error("Дата релиза раньше 28.12.1895");
+            throw new ValidationException("Дата релиза не может быть раньше 28 декабря 1895 года");
+        }
+
+        if (film.getDuration() <= 0) {
+            log.error("Продолжительность не положительная");
+            throw new ValidationException("Продолжительность должна быть положительным числом");
         }
     }
 }
