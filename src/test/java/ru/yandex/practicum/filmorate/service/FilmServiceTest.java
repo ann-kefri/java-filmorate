@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.GenreDbStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.MpaRatingDbStorage;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,13 +20,16 @@ class FilmServiceTest {
     private UserService userService;
     private InMemoryFilmStorage filmStorage;
     private InMemoryUserStorage userStorage;
+    private GenreDbStorage genreStorage;
+    private MpaRatingDbStorage mpaRatingStorage;
 
     @BeforeEach
     void setUp() {
-        // Используем InMemory хранилища для тестов (они реализуют те же интерфейсы)
         filmStorage = new InMemoryFilmStorage();
         userStorage = new InMemoryUserStorage();
-        filmService = new FilmService(filmStorage, userStorage);
+        genreStorage = new GenreDbStorage(null);
+        mpaRatingStorage = new MpaRatingDbStorage(null);
+        filmService = new FilmService(filmStorage, userStorage, genreStorage, mpaRatingStorage);
         userService = new UserService(userStorage);
     }
 
