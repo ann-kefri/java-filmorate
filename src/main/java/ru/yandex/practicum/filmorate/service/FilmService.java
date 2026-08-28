@@ -5,7 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MpaRating;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.GenreDbStorage;
+import ru.yandex.practicum.filmorate.storage.MpaRatingDbStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.List;
@@ -16,8 +20,28 @@ import java.util.List;
 public class FilmService {
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
+    private final GenreDbStorage genreStorage;
+    private final MpaRatingDbStorage mpaRatingStorage;
 
     public Film createFilm(Film film) {
+        if (film.getMpa() != null) {
+            mpaRatingStorage.getById(film.getMpa().getId())
+                    .orElseThrow(() -> {
+                        log.error("Рейтинг MPA с id {} не найден", film.getMpa().getId());
+                        return new NotFoundException("Рейтинг MPA с id " + film.getMpa().getId() + " не найден");
+                    });
+        }
+
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            for (Genre genre : film.getGenres()) {
+                genreStorage.getById(genre.getId())
+                        .orElseThrow(() -> {
+                            log.error("Жанр с id {} не найден", genre.getId());
+                            return new NotFoundException("Жанр с id " + genre.getId() + " не найден");
+                        });
+            }
+        }
+
         return filmStorage.create(film);
     }
 
