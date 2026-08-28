@@ -14,6 +14,7 @@ import ru.yandex.practicum.filmorate.model.Genre;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.*;
 
 @Slf4j
@@ -36,8 +37,9 @@ public class FilmDbStorage implements FilmStorage {
 
             Integer mpaId = rs.getInt("mpa_rating_id");
             if (!rs.wasNull()) {
-                film.setMpaRating(mpaRatingStorage.getById(mpaId).orElse(null));
+                film.setMpa(mpaRatingStorage.getById(mpaId).orElse(null));  // ← setMpa
             }
+
             film.setGenres(new HashSet<>(genreStorage.getGenresByFilmId(film.getId())));
 
             String likesSql = "SELECT user_id FROM likes WHERE film_id = ?";
@@ -59,16 +61,15 @@ public class FilmDbStorage implements FilmStorage {
             ps.setString(2, film.getDescription());
             ps.setDate(3, java.sql.Date.valueOf(film.getReleaseDate()));
             ps.setInt(4, film.getDuration());
-            if (film.getMpaRating() != null) {
-                ps.setInt(5, film.getMpaRating().getId());
+            if (film.getMpa() != null) {  // ← getMpa
+                ps.setInt(5, film.getMpa().getId());
             } else {
-                ps.setNull(5, java.sql.Types.INTEGER);
+                ps.setNull(5, Types.INTEGER);
             }
             return ps;
         }, keyHolder);
 
         film.setId(Objects.requireNonNull(keyHolder.getKey()).intValue());
-
         saveGenres(film);
 
         log.debug("Создан фильм в БД: {}", film);
@@ -83,7 +84,7 @@ public class FilmDbStorage implements FilmStorage {
                 film.getDescription(),
                 java.sql.Date.valueOf(film.getReleaseDate()),
                 film.getDuration(),
-                film.getMpaRating() != null ? film.getMpaRating().getId() : null,
+                film.getMpa() != null ? film.getMpa().getId() : null,  // ← getMpa
                 film.getId());
 
         if (rowsAffected == 0) {
@@ -134,22 +135,24 @@ public class FilmDbStorage implements FilmStorage {
     private void updateGenres(Film film) {
         String deleteSql = "DELETE FROM film_genres WHERE film_id = ?";
         jdbcTemplate.update(deleteSql, film.getId());
-
         saveGenres(film);
     }
 
+    @Override
     public void addLike(int filmId, int userId) {
         String sql = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
         jdbcTemplate.update(sql, filmId, userId);
         log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
     }
 
+    @Override
     public void removeLike(int filmId, int userId) {
         String sql = "DELETE FROM likes WHERE film_id = ? AND user_id = ?";
         jdbcTemplate.update(sql, filmId, userId);
         log.info("Пользователь {} удалил лайк у фильма {}", userId, filmId);
     }
 
+    @Override
     public List<Film> getPopular(int count) {
         String sql = "SELECT f.*, COUNT(l.user_id) as likes_count FROM films f " +
                 "LEFT JOIN likes l ON f.id = l.film_id " +
