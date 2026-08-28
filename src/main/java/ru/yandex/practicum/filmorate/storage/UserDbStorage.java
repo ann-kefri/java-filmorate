@@ -134,15 +134,12 @@ public class UserDbStorage implements UserStorage {
             throw new NotFoundException("Пользователь с id " + userId + " не найден");
         }
 
+        // Только друзья, которых добавил пользователь
         String sql = "SELECT u.* FROM users u " +
-                "WHERE u.id IN (" +
-                "    SELECT friend_id FROM friendships WHERE user_id = ?" +
-                ") OR u.id IN (" +
-                "    SELECT user_id FROM friendships WHERE friend_id = ?" +
-                ")";
-        List<User> friends = jdbcTemplate.query(sql, userRowMapper(), userId, userId);
+                "JOIN friendships f ON f.friend_id = u.id " +
+                "WHERE f.user_id = ?";
+        List<User> friends = jdbcTemplate.query(sql, userRowMapper(), userId);
 
-        // Загружаем друзей для каждого найденного друга
         for (User friend : friends) {
             loadFriends(friend);
         }
@@ -162,13 +159,9 @@ public class UserDbStorage implements UserStorage {
         Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, userId, friendId);
 
         if (count == 0) {
-            String sql1 = "INSERT INTO friendships (user_id, friend_id, status_id) VALUES (?, ?, ?)";
-            jdbcTemplate.update(sql1, userId, friendId, 1);
-
-            String sql2 = "INSERT INTO friendships (user_id, friend_id, status_id) VALUES (?, ?, ?)";
-            jdbcTemplate.update(sql2, friendId, userId, 1);
-
-            log.info("Пользователи {} и {} стали друзьями (взаимно)", userId, friendId);
+            String sql = "INSERT INTO friendships (user_id, friend_id, status_id) VALUES (?, ?, ?)";
+            jdbcTemplate.update(sql, userId, friendId, 1);
+            log.info("Пользователь {} добавил в друзья {}", userId, friendId);
         }
     }
 
@@ -182,9 +175,9 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void removeFriend(int userId, int friendId) {
-        String sql = "DELETE FROM friendships WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)";
-        jdbcTemplate.update(sql, userId, friendId, friendId, userId);
-        log.info("Пользователи {} и {} перестали быть друзьями", userId, friendId);
+        String sql = "DELETE FROM friendships WHERE user_id = ? AND friend_id = ?";
+        jdbcTemplate.update(sql, userId, friendId);
+        log.info("Пользователь {} удалил из друзей {}", userId, friendId);
     }
 
     @Override
@@ -195,12 +188,6 @@ public class UserDbStorage implements UserStorage {
                 ") AND u.id IN (" +
                 "    SELECT friend_id FROM friendships WHERE user_id = ?" +
                 ")";
-        List<User> commonFriends = jdbcTemplate.query(sql, userRowMapper(), userId, otherId);
-
-        for (User friend : commonFriends) {
-            loadFriends(friend);
-        }
-
-        return commonFriends;
+        return jdbcTemplate.query(sql, userRowMapper(), userId, otherId);
     }
 }

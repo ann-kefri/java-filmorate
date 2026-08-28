@@ -61,12 +61,10 @@ public class UserService {
         userStorage.addFriend(userId, friendId);
 
         user.getFriends().add(friendId);
-        friend.getFriends().add(userId);
 
         userStorage.update(user);
-        userStorage.update(friend);
 
-        log.info("Пользователи {} и {} стали друзьями", userId, friendId);
+        log.info("Пользователь {} добавил в друзья {}", userId, friendId);
         return user;
     }
 
@@ -77,7 +75,7 @@ public class UserService {
                     return new NotFoundException("Пользователь с id " + userId + " не найден");
                 });
 
-        User friend = userStorage.getById(friendId)
+        userStorage.getById(friendId)
                 .orElseThrow(() -> {
                     log.error("Пользователь с id {} не найден", friendId);
                     return new NotFoundException("Пользователь с id " + friendId + " не найден");
@@ -86,12 +84,10 @@ public class UserService {
         userStorage.removeFriend(userId, friendId);
 
         user.getFriends().remove(friendId);
-        friend.getFriends().remove(userId);
 
         userStorage.update(user);
-        userStorage.update(friend);
 
-        log.info("Пользователи {} и {} перестали быть друзьями", userId, friendId);
+        log.info("Пользователь {} удалил из друзей {}", userId, friendId);
         return user;
     }
 
