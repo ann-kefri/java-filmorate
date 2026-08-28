@@ -13,9 +13,7 @@ import ru.yandex.practicum.filmorate.model.User;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -36,6 +34,27 @@ public class UserDbStorage implements UserStorage {
         };
     }
 
+    private void loadFriends(User user) {
+        if (user == null) return;
+
+        String sql = "SELECT friend_id FROM friendships WHERE user_id = ?";
+        List<Integer> friendIds = jdbcTemplate.query(sql,
+                (rs, rowNum) -> rs.getInt("friend_id"),
+                user.getId());
+
+        String sql2 = "SELECT user_id FROM friendships WHERE friend_id = ?";
+        List<Integer> friendIds2 = jdbcTemplate.query(sql2,
+                (rs, rowNum) -> rs.getInt("user_id"),
+                user.getId());
+
+        Set<Integer> allFriends = new HashSet<>();
+        allFriends.addAll(friendIds);
+        allFriends.addAll(friendIds2);
+
+        user.setFriends(allFriends);
+        log.debug("Загружено {} друзей для пользователя {}", allFriends.size(), user.getId());
+    }
+
     @Override
     public User create(User user) {
         String sql = "INSERT INTO users (email, login, name, birthday) VALUES (?, ?, ?, ?)";
@@ -51,6 +70,7 @@ public class UserDbStorage implements UserStorage {
         }, keyHolder);
 
         user.setId(Objects.requireNonNull(keyHolder.getKey()).intValue());
+        loadFriends(user);
         log.debug("Создан пользователь в БД: {}", user);
         return user;
     }
@@ -70,6 +90,7 @@ public class UserDbStorage implements UserStorage {
             throw new NotFoundException("Пользователь с id " + user.getId() + " не найден");
         }
 
+        loadFriends(user);
         log.debug("Обновлен пользователь в БД: {}", user);
         return user;
     }
@@ -77,7 +98,12 @@ public class UserDbStorage implements UserStorage {
     @Override
     public List<User> getAll() {
         String sql = "SELECT * FROM users";
-        return jdbcTemplate.query(sql, userRowMapper());
+        List<User> users = jdbcTemplate.query(sql, userRowMapper());
+
+        for (User user : users) {
+            loadFriends(user);
+        }
+        return users;
     }
 
     @Override
@@ -85,6 +111,9 @@ public class UserDbStorage implements UserStorage {
         String sql = "SELECT * FROM users WHERE id = ?";
         try {
             User user = jdbcTemplate.queryForObject(sql, userRowMapper(), id);
+            if (user != null) {
+                loadFriends(user);
+            }
             return Optional.ofNullable(user);
         } catch (Exception e) {
             return Optional.empty();
@@ -100,13 +129,26 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getFriends(int userId) {
+        if (getById(userId).isEmpty()) {
+            log.error("Пользователь с id {} не найден", userId);
+            throw new NotFoundException("Пользователь с id " + userId + " не найден");
+        }
+
         String sql = "SELECT u.* FROM users u " +
                 "WHERE u.id IN (" +
                 "    SELECT friend_id FROM friendships WHERE user_id = ?" +
                 ") OR u.id IN (" +
                 "    SELECT user_id FROM friendships WHERE friend_id = ?" +
                 ")";
-        return jdbcTemplate.query(sql, userRowMapper(), userId, userId);
+        List<User> friends = jdbcTemplate.query(sql, userRowMapper(), userId, userId);
+
+        // Загружаем друзей для каждого найденного друга
+        for (User friend : friends) {
+            loadFriends(friend);
+        }
+
+        log.info("Найдено {} друзей для пользователя {}", friends.size(), userId);
+        return friends;
     }
 
     @Override
@@ -127,11 +169,6 @@ public class UserDbStorage implements UserStorage {
             jdbcTemplate.update(sql2, friendId, userId, 1);
 
             log.info("Пользователи {} и {} стали друзьями (взаимно)", userId, friendId);
-        } else {
-            String updateSql = "UPDATE friendships SET status_id = 1 WHERE user_id = ? AND friend_id = ?";
-            jdbcTemplate.update(updateSql, userId, friendId);
-            jdbcTemplate.update(updateSql, friendId, userId);
-            log.info("Пользователи {} и {} подтвердили дружбу", userId, friendId);
         }
     }
 
@@ -158,6 +195,12 @@ public class UserDbStorage implements UserStorage {
                 ") AND u.id IN (" +
                 "    SELECT friend_id FROM friendships WHERE user_id = ?" +
                 ")";
-        return jdbcTemplate.query(sql, userRowMapper(), userId, otherId);
+        List<User> commonFriends = jdbcTemplate.query(sql, userRowMapper(), userId, otherId);
+
+        for (User friend : commonFriends) {
+            loadFriends(friend);
+        }
+
+        return commonFriends;
     }
 }
