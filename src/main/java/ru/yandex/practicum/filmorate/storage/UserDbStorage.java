@@ -100,8 +100,6 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getFriends(int userId) {
-        // Получаем ВСЕХ друзей (и подтвержденных, и неподтвержденных)
-        // По ТЗ дружба односторонняя, поэтому проверяем только user_id
         String sql = "SELECT u.* FROM users u " +
                 "JOIN friendships f ON f.friend_id = u.id " +
                 "WHERE f.user_id = ?";
@@ -110,19 +108,27 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public void addFriend(int userId, int friendId) {
-        // Проверяем, не существует ли уже такой связи
+        if (getById(userId).isEmpty() || getById(friendId).isEmpty()) {
+            log.error("Один из пользователей не найден");
+            throw new NotFoundException("Пользователь не найден");
+        }
+
         String checkSql = "SELECT COUNT(*) FROM friendships WHERE user_id = ? AND friend_id = ?";
         Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, userId, friendId);
 
         if (count == 0) {
-            String sql = "INSERT INTO friendships (user_id, friend_id, status_id) VALUES (?, ?, ?)";
-            jdbcTemplate.update(sql, userId, friendId, 2);
-            log.info("Пользователь {} отправил заявку пользователю {}", userId, friendId);
+            String sql1 = "INSERT INTO friendships (user_id, friend_id, status_id) VALUES (?, ?, ?)";
+            jdbcTemplate.update(sql1, userId, friendId, 1);
+
+            String sql2 = "INSERT INTO friendships (user_id, friend_id, status_id) VALUES (?, ?, ?)";
+            jdbcTemplate.update(sql2, friendId, userId, 1);
+
+            log.info("Пользователи {} и {} стали друзьями (взаимно)", userId, friendId);
         } else {
-            // Если связь уже существует, обновляем статус на CONFIRMED
             String updateSql = "UPDATE friendships SET status_id = 1 WHERE user_id = ? AND friend_id = ?";
             jdbcTemplate.update(updateSql, userId, friendId);
-            log.info("Пользователь {} подтвердил дружбу с {}", userId, friendId);
+            jdbcTemplate.update(updateSql, friendId, userId);
+            log.info("Пользователи {} и {} подтвердили дружбу", userId, friendId);
         }
     }
 
@@ -130,14 +136,15 @@ public class UserDbStorage implements UserStorage {
     public void confirmFriend(int userId, int friendId) {
         String sql = "UPDATE friendships SET status_id = 1 WHERE user_id = ? AND friend_id = ?";
         jdbcTemplate.update(sql, userId, friendId);
-        log.info("Пользователь {} подтвердил дружбу с {}", userId, friendId);
+        jdbcTemplate.update(sql, friendId, userId);
+        log.info("Пользователи {} и {} подтвердили дружбу", userId, friendId);
     }
 
     @Override
     public void removeFriend(int userId, int friendId) {
-        String sql = "DELETE FROM friendships WHERE user_id = ? AND friend_id = ?";
-        jdbcTemplate.update(sql, userId, friendId);
-        log.info("Пользователь {} удалил из друзей {}", userId, friendId);
+        String sql = "DELETE FROM friendships WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)";
+        jdbcTemplate.update(sql, userId, friendId, friendId, userId);
+        log.info("Пользователи {} и {} перестали быть друзьями", userId, friendId);
     }
 
     @Override
