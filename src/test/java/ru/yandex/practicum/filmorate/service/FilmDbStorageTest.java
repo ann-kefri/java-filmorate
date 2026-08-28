@@ -8,14 +8,8 @@ import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.FilmDbStorage;
-import ru.yandex.practicum.filmorate.storage.GenreDbStorage;
-import ru.yandex.practicum.filmorate.storage.MpaRatingDbStorage;
-import ru.yandex.practicum.filmorate.storage.UserDbStorage;
-import ru.yandex.practicum.filmorate.storage.mappers.FilmRowMapper;
-import ru.yandex.practicum.filmorate.storage.mappers.GenreRowMapper;
-import ru.yandex.practicum.filmorate.storage.mappers.MpaRatingRowMapper;
-import ru.yandex.practicum.filmorate.storage.mappers.UserRowMapper;
+import ru.yandex.practicum.filmorate.storage.*;
+import ru.yandex.practicum.filmorate.storage.mappers.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -29,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({FilmDbStorage.class, FilmRowMapper.class, UserDbStorage.class,
         UserRowMapper.class, GenreDbStorage.class, MpaRatingDbStorage.class,
-        GenreRowMapper.class, MpaRatingRowMapper.class})  // ← ДОБАВИТЬ ВСЕ КЛАССЫ!
+        GenreRowMapper.class, MpaRatingRowMapper.class})
 class FilmDbStorageTest {
 
     private final FilmDbStorage filmStorage;
@@ -45,7 +39,7 @@ class FilmDbStorageTest {
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
         film.setGenres(Set.of(genreStorage.getById(1).orElseThrow()));
-        film.setMpaRating(mpaRatingStorage.getById(3).orElseThrow());
+        film.setMpa(mpaRatingStorage.getById(3).orElseThrow());  // ← setMpa
         Film created = filmStorage.create(film);
 
         Optional<Film> filmOptional = filmStorage.getById(created.getId());
@@ -65,7 +59,7 @@ class FilmDbStorageTest {
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
         film.setGenres(Set.of(genreStorage.getById(1).orElseThrow()));
-        film.setMpaRating(mpaRatingStorage.getById(3).orElseThrow());
+        film.setMpa(mpaRatingStorage.getById(3).orElseThrow());  // ← setMpa
 
         Film created = filmStorage.create(film);
 
@@ -75,7 +69,8 @@ class FilmDbStorageTest {
                 .hasFieldOrPropertyWithValue("duration", 120);
         assertThat(created.getId()).isPositive();
         assertThat(created.getGenres()).isNotEmpty();
-        assertThat(created.getMpaRating()).isNotNull();
+        assertThat(created.getMpa()).isNotNull();  // ← getMpa
+        assertThat(created.getMpa().getId()).isEqualTo(3);
     }
 
     @Test
@@ -86,7 +81,7 @@ class FilmDbStorageTest {
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
         film.setGenres(Set.of(genreStorage.getById(1).orElseThrow()));
-        film.setMpaRating(mpaRatingStorage.getById(3).orElseThrow());
+        film.setMpa(mpaRatingStorage.getById(3).orElseThrow());  // ← setMpa
         Film created = filmStorage.create(film);
 
         created.setName("Updated Film");
