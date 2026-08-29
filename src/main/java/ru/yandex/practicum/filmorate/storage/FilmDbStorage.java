@@ -90,6 +90,13 @@ public class FilmDbStorage implements FilmStorage {
                 .map(Film::getId)
                 .collect(Collectors.toList());
 
+        for (Film film : films) {
+            if (film.getMpa() != null) {
+                mpaRatingStorage.getById(film.getMpa().getId())
+                        .ifPresent(film::setMpa);
+            }
+        }
+
         Map<Integer, Set<Genre>> genresMap = getGenresByFilmIds(filmIds);
         Map<Integer, Set<Integer>> likesMap = getLikesByFilmIds(filmIds);
 
@@ -119,6 +126,12 @@ public class FilmDbStorage implements FilmStorage {
         }, keyHolder);
 
         film.setId(Objects.requireNonNull(keyHolder.getKey()).intValue());
+
+        if (film.getMpa() != null) {
+            mpaRatingStorage.getById(film.getMpa().getId())
+                    .ifPresent(film::setMpa);
+        }
+
         saveGenres(film);
 
         log.debug("Создан фильм в БД: {}", film);
@@ -139,6 +152,11 @@ public class FilmDbStorage implements FilmStorage {
         if (rowsAffected == 0) {
             log.error("Фильм с id {} не найден", film.getId());
             throw new NotFoundException("Фильм с id " + film.getId() + " не найден");
+        }
+
+        if (film.getMpa() != null) {
+            mpaRatingStorage.getById(film.getMpa().getId())
+                    .ifPresent(film::setMpa);
         }
 
         updateGenres(film);
