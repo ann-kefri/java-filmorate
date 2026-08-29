@@ -9,6 +9,8 @@ import ru.yandex.practicum.filmorate.storage.GenreDbStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
 import ru.yandex.practicum.filmorate.storage.MpaRatingDbStorage;
+import ru.yandex.practicum.filmorate.storage.mappers.GenreRowMapper;
+import ru.yandex.practicum.filmorate.storage.mappers.MpaRatingRowMapper;
 
 import java.time.LocalDate;
 
@@ -26,8 +28,13 @@ class FilmControllerTest {
     void setUp() {
         filmStorage = new InMemoryFilmStorage();
         userStorage = new InMemoryUserStorage();
-        genreStorage = new GenreDbStorage(null);        // ← СНАЧАЛА ИНИЦИАЛИЗИРУЕМ
-        mpaRatingStorage = new MpaRatingDbStorage(null); // ← СНАЧАЛА ИНИЦИАЛИЗИРУЕМ
+
+        GenreRowMapper genreRowMapper = new GenreRowMapper();
+        MpaRatingRowMapper mpaRatingRowMapper = new MpaRatingRowMapper();
+
+        genreStorage = new GenreDbStorage(null, genreRowMapper);
+        mpaRatingStorage = new MpaRatingDbStorage(null, mpaRatingRowMapper);
+
         filmService = new FilmService(filmStorage, userStorage, genreStorage, mpaRatingStorage);
         filmController = new FilmController(filmService, genreStorage, mpaRatingStorage);
     }

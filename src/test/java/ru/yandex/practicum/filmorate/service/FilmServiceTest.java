@@ -27,8 +27,8 @@ class FilmServiceTest {
     void setUp() {
         filmStorage = new InMemoryFilmStorage();
         userStorage = new InMemoryUserStorage();
-        genreStorage = new GenreDbStorage(null);
-        mpaRatingStorage = new MpaRatingDbStorage(null);
+        genreStorage = new GenreDbStorage(null, null);
+        mpaRatingStorage = new MpaRatingDbStorage(null, null);
         filmService = new FilmService(filmStorage, userStorage, genreStorage, mpaRatingStorage);
         userService = new UserService(userStorage);
     }
