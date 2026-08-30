@@ -5,8 +5,12 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.storage.GenreDbStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.MpaRatingDbStorage;
+import ru.yandex.practicum.filmorate.storage.mappers.GenreRowMapper;
+import ru.yandex.practicum.filmorate.storage.mappers.MpaRatingRowMapper;
 
 import java.time.LocalDate;
 
@@ -17,13 +21,22 @@ class FilmControllerTest {
     private FilmService filmService;
     private InMemoryFilmStorage filmStorage;
     private InMemoryUserStorage userStorage;
+    private GenreDbStorage genreStorage;
+    private MpaRatingDbStorage mpaRatingStorage;
 
     @BeforeEach
     void setUp() {
         filmStorage = new InMemoryFilmStorage();
         userStorage = new InMemoryUserStorage();
-        filmService = new FilmService(filmStorage, userStorage);
-        filmController = new FilmController(filmService);
+
+        GenreRowMapper genreRowMapper = new GenreRowMapper();
+        MpaRatingRowMapper mpaRatingRowMapper = new MpaRatingRowMapper();
+
+        genreStorage = new GenreDbStorage(null, genreRowMapper);
+        mpaRatingStorage = new MpaRatingDbStorage(null, mpaRatingRowMapper);
+
+        filmService = new FilmService(filmStorage, userStorage, genreStorage, mpaRatingStorage);
+        filmController = new FilmController(filmService, genreStorage, mpaRatingStorage);
     }
 
     @Test
